@@ -49,9 +49,11 @@ int main() {
     map_waypoints_dx.push_back(d_x);
     map_waypoints_dy.push_back(d_y);
   }
+  int lane = 1; // 0 = left, 1 = middle, 2 = right 
+  double ref_vel = 0.0; // mph
 
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
-               &map_waypoints_dx,&map_waypoints_dy]
+               &map_waypoints_dx,&map_waypoints_dy,&lane]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -87,7 +89,36 @@ int main() {
           // Sensor Fusion Data, a list of all other cars on the same side 
           //   of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
+          int prev_size=previous_path_x.size();
+          if(prev_size>0)
+          {
+            car_s=end_path_s;
+          }
+          bool car_on_right = false;
+          bool car_on_left = false;
+          bool car_ahead = false;
 
+          // Predicting the behaviors of cars around
+          for (int i = 0; i < sensor_fusion.size(); i++)
+          {
+            float d = sensor_fusion[i][6];
+            int check_lane = -1;
+            if (d > 0 && d < 4) {check_lane = 0;}         // left lane
+            else if (d > 4 && d < 8) {check_lane = 1;}    // middle lane
+            else if (d > 8 && d < 12) {check_lane = 2;}   // right lane 
+            if (check_lane < 0) {continue;}
+
+            double vx = sensor_fusion[i][3];
+            double vy = sensor_fusion[i][4];
+            double check_car_s = sensor_fusion[i][5];
+            double check_speed = sqrt(vx*vx + vy*vy);
+            // Target vehicle distance
+            check_car_s += ((double)prev_size * 0.02 * check_speed);
+
+            if (check_lane == lane){car_ahead |= (check_car_s > car_s) && (check_car_s - car_s < 30);}
+            else if (check_lane - lane == -1) {car_on_left |= (car_s - check_car_s < 20) && (check_car_s - car_s < 20);}
+            else if (check_lane - lane == 1) { car_on_right |= (car_s - check_car_s < 20) && (check_car_s - car_s < 20);}
+          }
           json msgJson;
 
           vector<double> next_x_vals;
