@@ -119,6 +119,17 @@ int main() {
             else if (check_lane - lane == -1) {car_on_left |= (car_s - check_car_s < 20) && (check_car_s - car_s < 20);}
             else if (check_lane - lane == 1) { car_on_right |= (car_s - check_car_s < 20) && (check_car_s - car_s < 20);}
           }
+
+          // Behavior of our vehicle
+          double vel_adj = 0.0;
+          double MAX_SPEED = 45.0;
+          double MAX_ACC = 0.2;
+          if (car_ahead == true) 
+          {
+            if (car_on_left == false && lane != 0) {lane -= 1;}
+            else if (car_on_right == false && lane != 2) {lane += 1;}
+            else{vel_adj -= MAX_ACC;}
+          }
           json msgJson;
 
           vector<double> next_x_vals;
