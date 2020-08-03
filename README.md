@@ -65,12 +65,6 @@ the path has processed since last time.
 
 2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
 
-## Tips
-
-A really helpful resource for doing this project and creating smooth trajectories was using http://kluge.in-chemnitz.de/opensource/spline/, the spline function is in a single hearder file is really easy to use.
-
----
-
 ## Dependencies
 
 * cmake >= 3.5
@@ -91,55 +85,18 @@ A really helpful resource for doing this project and creating smooth trajectorie
     cd uWebSockets
     git checkout e94b6e1
     ```
+## Pipeline
 
-## Editor Settings
+### 1. Predict other vehicles' behavior
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+To predict other vehicles' behaviors, we must determine the lane of them and the distance between our vehicle. To do that, we must use d-s coordinate frame. d axis specifies the distance from middle spot and s axis specifies the longitudal distance from our vehicle to other vehicles. We measure the distance from sensor fusion module. With help of sensor fusion, it is possible to know where the other vehicle is, categorized by center/right/left lanes which is indicated main.cpp lines 105-110.
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+To check s-value (longitudal distance) of other vehicle, euclidian distance is calculated w.r.t the help of sensor fusion's vx and vy values. With confidence thresholds (which are denoted in main.cpp lines 119-121), it is able to known if there are any vehicles left, right or ahead.
 
-## Code Style
+### 2. Behavior of our vehicle
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+In this module, we specify the behavior of our vehicle by limiting the speed, acceleration values and current lanes. For example if our vehicle is on the right lane, we ensure that it will not attemt to pass right again. By this, the car will always be in the road. Variables and rules are denoted in main.cpp lines between 126-135)
 
-## Project Instructions and Rubric
+### 3. Trajectory generation
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
+To generate trajection, waypoints must be created. To ensure performance and stability, number of waypoints are chosen as 50. To locate waypoints on road, actual X and Y positions must be known. GetXY() function which locates in helpers.h library returns the actual {x,y} tuple, feeding by s, d, map_s, map_x and map_y parameters as function arguments. After waypoints are marked on road, coordinate transformation is made from global map to vehicle's local coordinate frame. Then a line is created between consequtive waypoints, which is calculated by euclidian distance. Waypoint and line informations are collected in vectors to be drawn on road.
